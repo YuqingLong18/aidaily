@@ -1,0 +1,21 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Item {
+  id          String   @id @default(uuid())
+  title       String
+  url         String   @unique
+  source      String
+  type        String   // "academic" or "industry"
+  summary     String
+  category    String
+  score       Float
+  publishedAt DateTime
+  createdAt   DateTime @default(now())
+}
