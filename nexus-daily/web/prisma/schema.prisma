@@ -18,6 +18,12 @@ model Item {
   source      String
   type        String   // "academic" or "industry"
   summary     String
+  summaryEn   String   @default("")
+  summaryZh   String   @default("")
+  whyItMattersEn String @default("")
+  whyItMattersZh String @default("")
+  keywordsEn  String   @default("")
+  keywordsZh  String   @default("")
   category    String
   score       Float
   publishedAt DateTime
