@@ -37,6 +37,37 @@ const labels = {
 export function Dashboard({ items }: { items: Item[] }) {
   const [language, setLanguage] = useState<Language>('en');
   const [daysAgo, setDaysAgo] = useState<number>(0);
+  const locale = language === 'zh' ? 'zh-CN' : 'en-US';
+  const headerFormatter = useMemo(
+    () =>
+      new Intl.DateTimeFormat(locale, {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        timeZone: 'UTC',
+      }),
+    [locale]
+  );
+  const dayChipFormatter = useMemo(
+    () =>
+      new Intl.DateTimeFormat(locale, {
+        month: 'short',
+        day: 'numeric',
+        timeZone: 'UTC',
+      }),
+    [locale]
+  );
+  const publishedDateFormatter = useMemo(
+    () =>
+      new Intl.DateTimeFormat(locale, {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        timeZone: 'UTC',
+      }),
+    [locale]
+  );
 
   const filteredItems = useMemo(() => {
     const today = new Date();
@@ -67,12 +98,7 @@ export function Dashboard({ items }: { items: Item[] }) {
           </div>
           <div className="flex items-center gap-3">
             <p className="text-sm font-medium text-gray-600">
-              {new Date().toLocaleDateString(language === 'zh' ? 'zh-CN' : undefined, {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-              })}
+              {headerFormatter.format(new Date())}
             </p>
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold uppercase tracking-[0.08em] text-gray-500">
@@ -80,15 +106,12 @@ export function Dashboard({ items }: { items: Item[] }) {
               </span>
               <div className="flex flex-wrap gap-2">
                 {Array.from({ length: MAX_DAYS }, (_, idx) => {
-                  const target = new Date();
-                  target.setDate(target.getDate() - idx);
+                  const now = new Date();
+                  const target = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - idx));
                   const label =
                     idx === 0
                       ? language === 'zh' ? '今天' : 'Today'
-                      : target.toLocaleDateString(language === 'zh' ? 'zh-CN' : undefined, {
-                          month: 'short',
-                          day: 'numeric',
-                        });
+                      : dayChipFormatter.format(target);
 
                   return (
                     <button
@@ -137,9 +160,7 @@ export function Dashboard({ items }: { items: Item[] }) {
           </h2>
           <div className="space-y-4">
             {academicItems.length > 0 ? (
-              academicItems.map(item => (
-                <NewsCard key={item.id} item={item} language={language} />
-              ))
+              academicItems.map(item => <NewsCard key={item.id} item={item} language={language} dateFormatter={publishedDateFormatter} />)
             ) : (
               <p className="text-gray-500 italic">{t.noAcademic}</p>
             )}
@@ -152,9 +173,7 @@ export function Dashboard({ items }: { items: Item[] }) {
           </h2>
           <div className="space-y-4">
             {industryItems.length > 0 ? (
-              industryItems.map(item => (
-                <NewsCard key={item.id} item={item} language={language} />
-              ))
+              industryItems.map(item => <NewsCard key={item.id} item={item} language={language} dateFormatter={publishedDateFormatter} />)
             ) : (
               <p className="text-gray-500 italic">{t.noIndustry}</p>
             )}

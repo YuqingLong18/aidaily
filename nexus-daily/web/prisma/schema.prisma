@@ -24,6 +24,8 @@ model Item {
   whyItMattersZh String @default("")
   keywordsEn  String   @default("")
   keywordsZh  String   @default("")
+  imageUrl    String?
+  imageAlt    String?
   category    String
   score       Float
   publishedAt DateTime

@@ -1,8 +1,12 @@
 import asyncio
-from scraper import fetch_arxiv_papers, get_industry_news
-from processor import LLMProcessor
-from prisma import Prisma
 import os
+from datetime import datetime
+
+from prisma import Prisma
+
+from image_utils import attach_images
+from processor import LLMProcessor
+from scraper import fetch_arxiv_papers, get_industry_news
 
 async def main():
     print("Starting ingestion pipeline...")
@@ -31,6 +35,10 @@ async def main():
         if processed:
             processed_items.append(processed)
             print(f"Processed: {processed['title']}")
+
+    # 2b. Fetch visual context for the selected cards
+    print("Attaching images to selected items...")
+    processed_items = attach_images(processed_items)
             
     # 3. Save to DB
     print("Saving to database...")
@@ -57,6 +65,8 @@ async def main():
                 'whyItMattersZh': item.get('why_it_matters_zh', ''),
                 'keywordsEn': ", ".join(item.get('keywords_en', [])),
                 'keywordsZh': ", ".join(item.get('keywords_zh', [])),
+                'imageUrl': item.get('image_url'),
+                'imageAlt': item.get('image_alt'),
                 'category': item['category'],
                 'score': float(item['score']),
                 'publishedAt': datetime.fromisoformat(item['published_at'].replace('Z', '+00:00')) if 'T' in item['published_at'] else datetime.now(), # Simple parsing fix needed for robust prod
@@ -70,5 +80,4 @@ async def main():
     print("Ingestion complete!")
 
 if __name__ == "__main__":
-    from datetime import datetime
     asyncio.run(main())

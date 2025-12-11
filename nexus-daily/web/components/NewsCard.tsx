@@ -6,6 +6,7 @@ import { Item } from '@prisma/client';
 interface NewsCardProps {
   item: Item;
   language: 'en' | 'zh';
+  dateFormatter?: Intl.DateTimeFormat;
 }
 
 function toBullets(raw?: string) {
@@ -34,8 +35,11 @@ function extractWhy(raw?: string) {
   return '';
 }
 
-export function NewsCard({ item, language }: NewsCardProps) {
+export function NewsCard({ item, language, dateFormatter }: NewsCardProps) {
   const isAcademic = item.type === 'academic';
+  const hasImage = Boolean(item.imageUrl);
+  const imageAlt = item.imageAlt || item.title;
+  const locale = language === 'zh' ? 'zh-CN' : 'en-US';
   const summaryText =
     language === 'zh'
       ? item.summaryZh || item.summaryEn || item.summary
@@ -49,6 +53,15 @@ export function NewsCard({ item, language }: NewsCardProps) {
   const bullets = toBullets(summaryText);
   const keywords = toKeywords(keywordsText);
   const publishedDate = new Date(item.publishedAt);
+  const formattedDate = (
+    dateFormatter ||
+    new Intl.DateTimeFormat(locale, {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      timeZone: 'UTC',
+    })
+  ).format(publishedDate);
 
   const labelWhy = language === 'zh' ? '价值要点' : 'Why it matters';
   const labelSource = language === 'zh' ? '来源' : 'Source';
@@ -64,13 +77,7 @@ export function NewsCard({ item, language }: NewsCardProps) {
         <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-500">
           {item.category}
         </span>
-        <span className="text-xs text-gray-400">
-          {publishedDate.toLocaleDateString(language === 'zh' ? 'zh-CN' : undefined, {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric',
-          })}
-        </span>
+        <span className="text-xs text-gray-400">{formattedDate}</span>
       </div>
 
       <h3 className="text-xl font-extrabold mb-3 leading-snug text-gray-900">
@@ -78,6 +85,12 @@ export function NewsCard({ item, language }: NewsCardProps) {
           {item.title}
         </a>
       </h3>
+
+      {hasImage && (
+        <div className="mb-4 overflow-hidden rounded-lg border border-white/70 bg-white shadow-sm">
+          <img src={item.imageUrl!} alt={imageAlt} className="h-48 w-full object-cover" loading="lazy" />
+        </div>
+      )}
 
       {keywords.length > 0 && (
         <div className="mb-4 flex flex-wrap gap-2">
