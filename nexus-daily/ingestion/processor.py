@@ -11,7 +11,8 @@ class LLMProcessor:
             base_url="https://openrouter.ai/api/v1",
             api_key=os.getenv("OPENROUTER_API_KEY"),
         )
-        self.model = "google/gemini-2.0-flash-exp:free" # Cost-effective default
+        # Allow overriding the model via env; fall back to a cost-effective default.
+        self.model = os.getenv("OPENROUTER_MODEL", "google/gemini-2.0-flash-exp:free")
 
     def process_item(self, item):
         """

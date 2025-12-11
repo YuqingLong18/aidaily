@@ -1,7 +1,8 @@
 import requests
 import feedparser
 import xml.etree.ElementTree as ET
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from email.utils import parsedate_to_datetime
 import time
 
 def fetch_arxiv_papers(categories=['cs.LG', 'cs.AI', 'cs.CL', 'cs.CV', 'stat.ML'], max_results=50):
@@ -9,6 +10,8 @@ def fetch_arxiv_papers(categories=['cs.LG', 'cs.AI', 'cs.CL', 'cs.CV', 'stat.ML'
     Fetches recent papers from arXiv for the given categories.
     """
     base_url = 'http://export.arxiv.org/api/query'
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(days=1)
     
     # Construct query
     # cat:cs.LG OR cat:cs.AI ...
@@ -35,6 +38,12 @@ def fetch_arxiv_papers(categories=['cs.LG', 'cs.AI', 'cs.CL', 'cs.CV', 'stat.ML'
             summary = entry.find('atom:summary', ns).text.strip().replace('\n', ' ')
             url = entry.find('atom:id', ns).text.strip()
             published = entry.find('atom:published', ns).text.strip()
+            try:
+                published_dt = datetime.fromisoformat(published.replace('Z', '+00:00')).astimezone(timezone.utc)
+            except Exception:
+                published_dt = now
+            if published_dt < cutoff:
+                continue
             
             # Get primary category
             primary_cat = entry.find('arxiv:primary_category', ns).attrib['term']
@@ -45,7 +54,7 @@ def fetch_arxiv_papers(categories=['cs.LG', 'cs.AI', 'cs.CL', 'cs.CV', 'stat.ML'
                 'summary': summary,
                 'source': 'arXiv',
                 'category': primary_cat,
-                'published_at': published,
+                'published_at': published_dt.isoformat(),
                 'type': 'academic'
             })
             
@@ -59,19 +68,37 @@ def fetch_rss_feed(url, source_name):
     """
     Fetches items from an RSS feed.
     """
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(days=1)
+
     try:
         feed = feedparser.parse(url)
         items = []
         
         for entry in feed.entries:
-            # Basic filtering for recent items could go here
+            published_dt = None
+            if getattr(entry, 'published_parsed', None):
+                published_dt = datetime.fromtimestamp(time.mktime(entry.published_parsed), tz=timezone.utc)
+            elif getattr(entry, 'updated_parsed', None):
+                published_dt = datetime.fromtimestamp(time.mktime(entry.updated_parsed), tz=timezone.utc)
+            elif getattr(entry, 'published', None):
+                try:
+                    published_dt = parsedate_to_datetime(entry.published).astimezone(timezone.utc)
+                except Exception:
+                    published_dt = None
+
+            if not published_dt:
+                continue
+
+            if published_dt < cutoff:
+                continue
             
             items.append({
                 'title': entry.title,
                 'url': entry.link,
                 'summary': getattr(entry, 'summary', '') or getattr(entry, 'description', ''),
                 'source': source_name,
-                'published_at': getattr(entry, 'published', datetime.now().isoformat()),
+                'published_at': published_dt.isoformat(),
                 'type': 'industry'
             })
             
