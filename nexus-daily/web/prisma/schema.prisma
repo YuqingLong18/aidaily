@@ -8,26 +8,27 @@ generator client_py {
 
 datasource db {
   provider = "sqlite"
-  url      = "file:./dev.db"
+  // Uses DATABASE_URL so staging/prod can point to shared Postgres/SQLite paths.
+  url      = env("DATABASE_URL")
 }
 
 model Item {
-  id          String   @id @default(uuid())
-  title       String
-  url         String   @unique
-  source      String
-  type        String   // "academic" or "industry"
-  summary     String
-  summaryEn   String   @default("")
-  summaryZh   String   @default("")
-  whyItMattersEn String @default("")
-  whyItMattersZh String @default("")
-  keywordsEn  String   @default("")
-  keywordsZh  String   @default("")
-  imageUrl    String?
-  imageAlt    String?
-  category    String
-  score       Float
-  publishedAt DateTime
-  createdAt   DateTime @default(now())
+  id             String   @id @default(uuid())
+  title          String
+  url            String   @unique
+  source         String
+  type           String // "academic" or "industry"
+  summary        String
+  summaryEn      String   @default("")
+  summaryZh      String   @default("")
+  whyItMattersEn String   @default("")
+  whyItMattersZh String   @default("")
+  keywordsEn     String   @default("")
+  keywordsZh     String   @default("")
+  imageUrl       String?
+  imageAlt       String?
+  category       String
+  score          Float
+  publishedAt    DateTime
+  createdAt      DateTime @default(now())
 }
