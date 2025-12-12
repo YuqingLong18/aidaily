@@ -1,5 +1,6 @@
 import asyncio
 import os
+import time
 from datetime import datetime
 
 from prisma import Prisma
@@ -38,7 +39,9 @@ async def main():
 
     # 2b. Fetch visual context for the selected cards
     print("Attaching images to selected items...")
+    image_start = time.time()
     processed_items = attach_images(processed_items)
+    print(f"Image fetch complete in {time.time() - image_start:.2f}s; items with images: {sum(1 for i in processed_items if i.get('image_url'))}/{len(processed_items)}")
             
     # 3. Save to DB
     print("Saving to database...")
