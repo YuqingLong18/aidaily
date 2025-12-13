@@ -53,17 +53,17 @@ export function NewsCard({ item, language, dateFormatter }: NewsCardProps) {
   const bullets = toBullets(summaryText);
   const keywords = toKeywords(keywordsText);
   
-  // Debug logging in development if card appears empty
-  if (process.env.NODE_ENV === 'development' && bullets.length === 0 && keywords.length === 0 && !whyTextRaw) {
+  // Debug logging in development if card appears empty (only with DEBUG flag to avoid build issues)
+  if (process.env.NODE_ENV === 'development' && process.env.DEBUG === 'true' && bullets.length === 0 && keywords.length === 0 && !whyTextRaw) {
     console.warn(`[NewsCard] Empty card detected for item:`, {
       id: item.id,
       title: item.title.substring(0, 40),
       type: item.type,
-      summary: item.summary?.substring(0, 50),
-      summaryEn: item.summaryEn?.substring(0, 50),
-      summaryZh: item.summaryZh?.substring(0, 50),
-      keywordsEn: item.keywordsEn,
-      keywordsZh: item.keywordsZh,
+      hasSummary: !!item.summary,
+      hasSummaryEn: !!item.summaryEn,
+      hasSummaryZh: !!item.summaryZh,
+      keywordsEn: item.keywordsEn?.substring(0, 50) || 'empty',
+      keywordsZh: item.keywordsZh?.substring(0, 50) || 'empty',
     });
   }
   const publishedDate = new Date(item.publishedAt);

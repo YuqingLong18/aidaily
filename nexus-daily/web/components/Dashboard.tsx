@@ -91,8 +91,8 @@ export function Dashboard({ items }: { items: Item[] }) {
       return itemDate >= target && itemDate < nextDay;
     });
     
-    // Debug logging in development
-    if (process.env.NODE_ENV === 'development') {
+    // Debug logging only in development with DEBUG flag
+    if (process.env.NODE_ENV === 'development' && process.env.DEBUG === 'true') {
       console.log(`[Dashboard] Filtering items: daysAgo=${daysAgo}, target=${target.toISOString()}, found=${filtered.length} items`);
     }
     

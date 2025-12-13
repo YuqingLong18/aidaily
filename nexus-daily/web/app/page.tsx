@@ -2,8 +2,13 @@ import { prisma } from '@/lib/prisma';
 import { Dashboard } from '@/components/Dashboard';
 import { Item } from '@prisma/client';
 
-// Revalidate every hour
+// Use dynamic rendering to avoid build-time database connection issues
+// Revalidate every hour in production
+export const dynamic = 'force-dynamic';
 export const revalidate = 3600;
+
+// Only log in development or when DEBUG is enabled
+const isDebug = process.env.NODE_ENV === 'development' || process.env.DEBUG === 'true';
 
 async function getItems(): Promise<Item[]> {
   // Use UTC dates to match ingestion pipeline
@@ -15,9 +20,13 @@ async function getItems(): Promise<Item[]> {
     0, 0, 0, 0
   ));
 
-  console.log(`[page.tsx] Fetching items published after: ${eightDaysAgo.toISOString()}`);
+  if (isDebug) {
+    console.log(`[page.tsx] Fetching items published after: ${eightDaysAgo.toISOString()}`);
+  }
   
   try {
+    // Limit items during build to prevent memory issues
+    // In production, this will be revalidated hourly anyway
     const items = await prisma.item.findMany({
       where: {
         publishedAt: {
@@ -28,41 +37,44 @@ async function getItems(): Promise<Item[]> {
         { publishedAt: 'desc' },
         { score: 'desc' },
       ],
+      take: 100, // Limit to prevent build-time memory issues
     });
     
-    console.log(`[page.tsx] Found ${items.length} items`);
-    console.log(`[page.tsx] Items breakdown: academic=${items.filter(i => i.type === 'academic').length}, industry=${items.filter(i => i.type === 'industry').length}`);
+    if (isDebug) {
+      const academicCount = items.filter(i => i.type === 'academic').length;
+      const industryCount = items.filter(i => i.type === 'industry').length;
+      console.log(`[page.tsx] Found ${items.length} items (academic: ${academicCount}, industry: ${industryCount})`);
+      
+      // Log sample items for debugging (simplified to avoid memory issues)
+      if (items.length > 0) {
+        const sample = items.slice(0, 2);
+        for (const item of sample) {
+          console.log(`[page.tsx] Sample: ${item.title.substring(0, 50)}... (${item.type}, ${item.category})`);
+        }
+      }
+    }
     
-    // Log sample items for debugging
-    if (items.length > 0) {
-      const sample = items.slice(0, 3);
-      console.log(`[page.tsx] Sample items:`, sample.map(i => ({
-        title: i.title.substring(0, 40),
-        type: i.type,
-        category: i.category,
-        publishedAt: i.publishedAt.toISOString(),
-        hasSummary: !!i.summary,
-        summaryEnLen: i.summaryEn?.length || 0,
-        summaryZhLen: i.summaryZh?.length || 0,
-      })));
-    } else {
-      console.warn(`[page.tsx] WARNING: No items found! This could indicate:`);
-      console.warn(`  - Database connection issue`);
-      console.warn(`  - Date filtering too restrictive`);
-      console.warn(`  - No data ingested yet`);
+    // Only do additional queries if no items found (to avoid build-time overhead)
+    if (items.length === 0 && isDebug) {
+      console.warn(`[page.tsx] WARNING: No items found!`);
       
-      // Check total count
-      const totalCount = await prisma.item.count();
-      console.log(`[page.tsx] Total items in database: ${totalCount}`);
-      
-      if (totalCount > 0) {
-        // Get the most recent item to see what dates we have
-        const mostRecent = await prisma.item.findFirst({
-          orderBy: { publishedAt: 'desc' },
-        });
-        if (mostRecent) {
-          console.log(`[page.tsx] Most recent item published at: ${mostRecent.publishedAt.toISOString()}`);
-          console.log(`[page.tsx] Cutoff date: ${eightDaysAgo.toISOString()}`);
+      try {
+        const totalCount = await prisma.item.count();
+        console.log(`[page.tsx] Total items in database: ${totalCount}`);
+        
+        if (totalCount > 0) {
+          const mostRecent = await prisma.item.findFirst({
+            orderBy: { publishedAt: 'desc' },
+            select: { publishedAt: true },
+          });
+          if (mostRecent) {
+            console.log(`[page.tsx] Most recent: ${mostRecent.publishedAt.toISOString()}, Cutoff: ${eightDaysAgo.toISOString()}`);
+          }
+        }
+      } catch (dbError) {
+        // Don't fail build if diagnostic query fails
+        if (isDebug) {
+          console.warn(`[page.tsx] Could not run diagnostic queries:`, dbError);
         }
       }
     }
