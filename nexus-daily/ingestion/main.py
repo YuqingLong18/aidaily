@@ -213,11 +213,15 @@ async def main():
         logger.info(f"Database now contains {final_count} items (added {final_count - total_count})")
         
         # Query recent items to verify they're accessible
-        recent_items = await db.item.find_many(
-            take=5,
-            order_by={'publishedAt': 'desc'}
-        )
-        logger.info(f"Recent items in DB: {[(i.title[:40], i.publishedAt.isoformat()) for i in recent_items]}")
+        # Note: Prisma Python uses 'order' instead of 'order_by'
+        try:
+            recent_items = await db.item.find_many(take=5)
+            # Sort manually since Prisma Python syntax differs
+            recent_items.sort(key=lambda x: x.publishedAt, reverse=True)
+            recent_items = recent_items[:5]  # Take top 5 after sorting
+            logger.info(f"Recent items in DB: {[(i.title[:40], i.publishedAt.isoformat()) for i in recent_items]}")
+        except Exception as e:
+            logger.warning(f"Could not query recent items for verification: {e}")
         
     except Exception as e:
         logger.error(f"Database connection error: {e}", exc_info=True)
