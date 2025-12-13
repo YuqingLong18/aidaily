@@ -52,6 +52,20 @@ export function NewsCard({ item, language, dateFormatter }: NewsCardProps) {
 
   const bullets = toBullets(summaryText);
   const keywords = toKeywords(keywordsText);
+  
+  // Debug logging in development if card appears empty
+  if (process.env.NODE_ENV === 'development' && bullets.length === 0 && keywords.length === 0 && !whyTextRaw) {
+    console.warn(`[NewsCard] Empty card detected for item:`, {
+      id: item.id,
+      title: item.title.substring(0, 40),
+      type: item.type,
+      summary: item.summary?.substring(0, 50),
+      summaryEn: item.summaryEn?.substring(0, 50),
+      summaryZh: item.summaryZh?.substring(0, 50),
+      keywordsEn: item.keywordsEn,
+      keywordsZh: item.keywordsZh,
+    });
+  }
   const publishedDate = new Date(item.publishedAt);
   const formattedDate = (
     dateFormatter ||

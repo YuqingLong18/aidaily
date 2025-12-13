@@ -70,18 +70,33 @@ export function Dashboard({ items }: { items: Item[] }) {
   );
 
   const filteredItems = useMemo(() => {
-    const today = new Date();
-    const target = new Date(today.getFullYear(), today.getMonth(), today.getDate() - daysAgo);
+    // Use UTC dates to match server-side filtering
+    const now = new Date();
+    const target = new Date(Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate() - daysAgo,
+      0, 0, 0, 0
+    ));
+    const nextDay = new Date(Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate() - daysAgo + 1,
+      0, 0, 0, 0
+    ));
 
-    return items.filter(item => {
-      const d = new Date(item.publishedAt);
-      const localDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-      return (
-        localDate.getFullYear() === target.getFullYear() &&
-        localDate.getMonth() === target.getMonth() &&
-        localDate.getDate() === target.getDate()
-      );
+    const filtered = items.filter(item => {
+      const itemDate = new Date(item.publishedAt);
+      // Check if item is within the target day (UTC)
+      return itemDate >= target && itemDate < nextDay;
     });
+    
+    // Debug logging in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[Dashboard] Filtering items: daysAgo=${daysAgo}, target=${target.toISOString()}, found=${filtered.length} items`);
+    }
+    
+    return filtered;
   }, [items, daysAgo]);
 
   const academicItems = useMemo(() => filteredItems.filter(i => i.type === 'academic'), [filteredItems]);
