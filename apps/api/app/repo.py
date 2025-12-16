@@ -27,8 +27,16 @@ def count_items_for_edition(session: Session, edition_date_local: str, tz: str) 
     return len(list_items_for_edition(session, edition_date_local, tz))
 
 
-def upsert_by_source_url(session: Session, incoming: Item) -> Item:
+def upsert_item(session: Session, incoming: Item) -> Item:
     existing = session.exec(select(Item).where(Item.source_url == incoming.source_url)).first()
+    if existing is None and incoming.external_id:
+        existing = (
+            session.exec(select(Item).where(Item.source == incoming.source).where(Item.external_id == incoming.external_id))
+            .first()
+        )
+    if existing is None and incoming.canonical_url:
+        existing = session.exec(select(Item).where(Item.canonical_url == incoming.canonical_url)).first()
+
     now = datetime.utcnow()
     if existing is None:
         incoming.created_at_utc = now
@@ -45,6 +53,11 @@ def upsert_by_source_url(session: Session, incoming: Item) -> Item:
     session.commit()
     session.refresh(existing)
     return existing
+
+
+def upsert_by_source_url(session: Session, incoming: Item) -> Item:
+    # Backwards-compatible alias used by the MVP seed path.
+    return upsert_item(session, incoming)
 
 
 def top_by_section(items: Iterable[Item], limit_by_section: dict[Section, int]) -> dict[Section, list[Item]]:
