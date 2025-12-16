@@ -3,12 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import type { EditionMetaOut, EditionOut, ItemOut, Section } from "./api";
 import { fetchEdition, fetchEditions } from "./api";
-import { ACADEMIC_SECTIONS, INDUSTRY_SECTIONS, sectionLabel } from "./labels";
+import { ACADEMIC_SECTIONS, INDUSTRY_SECTIONS, sectionLabel, type Lang } from "./labels";
 
-const TZ_PRESETS = ["Asia/Hong_Kong", "UTC", "America/Los_Angeles", "Europe/London", "Asia/Tokyo"];
+const TZ = "Asia/Shanghai";
 const ALL_SECTIONS: Section[] = [...ACADEMIC_SECTIONS, ...INDUSTRY_SECTIONS];
 
 function prettyLocalLabel(isoDate: string): string {
+  if (!isoDate) return "";
   const [, m, d] = isoDate.split("-").map(Number);
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   return `${String(d).padStart(2, "0")} ${months[m - 1] ?? ""}`;
@@ -34,6 +35,16 @@ function cardWhyText(item: ItemOut): string | null {
   return item.market_impact ?? null;
 }
 
+function cardWhyLabelZh(item: ItemOut): string {
+  if (item.item_type === "paper") return "为何重要：";
+  return "市场/影响：";
+}
+
+function cardWhyTextZh(item: ItemOut): string | null {
+  if (item.item_type === "paper") return item.why_it_matters_zh ?? item.why_it_matters ?? null;
+  return item.market_impact_zh ?? item.market_impact ?? null;
+}
+
 function reliabilityClass(reliability?: string | null): string | null {
   if (!reliability) return null;
   if (reliability === "High") return "tagReliabilityHigh";
@@ -42,43 +53,66 @@ function reliabilityClass(reliability?: string | null): string | null {
   return null;
 }
 
-function ItemCard({ item, showSectionTag }: { item: ItemOut; showSectionTag?: boolean }) {
-  const why = cardWhyText(item);
+function ItemCard({
+  item,
+  showSectionTag,
+  lang
+}: {
+  item: ItemOut;
+  showSectionTag?: boolean;
+  lang: Lang;
+}) {
+  const isZh = lang === "zh";
+  const why = isZh ? cardWhyTextZh(item) : cardWhyText(item);
   const score = Math.round((item.rank_score ?? 0) * 100);
   const relClass = reliabilityClass(item.source_reliability);
+  const title = isZh ? item.title_zh ?? item.title : item.title;
+  const tags = isZh ? (item.tags_zh?.length ? item.tags_zh : item.tags) : item.tags;
+  const bullets = isZh
+    ? item.summary_bullets_zh?.length
+      ? item.summary_bullets_zh
+      : item.summary_bullets
+    : item.summary_bullets;
+  const whyLabel = isZh ? cardWhyLabelZh(item) : cardWhyLabel(item);
 
   return (
     <div className="card" key={item.id}>
       <div className="cardTitle">
         <a href={item.source_url} target="_blank" rel="noreferrer">
-          {item.title}
+          {title}
         </a>
       </div>
       <div className="metaRow">
         {score >= 90 ? <span className="tag tagStrong">Top</span> : null}
-        <span className="tag tagStrong">{item.item_type === "paper" ? "Research" : "Industry"}</span>
-        {showSectionTag ? <span className="tag">{sectionLabel(item.section)}</span> : null}
+        <span className="tag tagStrong">
+          {isZh ? (item.item_type === "paper" ? "论文" : "资讯") : item.item_type === "paper" ? "Research" : "Industry"}
+        </span>
+        {showSectionTag ? <span className="tag">{sectionLabel(item.section, lang)}</span> : null}
         <span className="tag">{item.source}</span>
-        <span className="tag">Published: {prettyUtc(item.published_at_utc)}</span>
-        <span className="tag">Score: {score}</span>
-        {item.difficulty ? <span className="tag">Difficulty: {item.difficulty}</span> : null}
-        {item.source_reliability ? (
-          <span className={`tag ${relClass ?? ""}`.trim()}>Reliability: {item.source_reliability}</span>
+        <span className="tag">{isZh ? `发布时间：${prettyUtc(item.published_at_utc)}` : `Published: ${prettyUtc(item.published_at_utc)}`}</span>
+        <span className="tag">{isZh ? `评分：${score}` : `Score: ${score}`}</span>
+        {item.difficulty ? (
+          <span className="tag">{isZh ? `难度：${item.difficulty}` : `Difficulty: ${item.difficulty}`}</span>
         ) : null}
-        {item.tags.slice(0, 6).map((t) => (
+        {item.source_reliability ? (
+          <span className={`tag ${relClass ?? ""}`.trim()}>
+            {isZh ? `可靠性：${item.source_reliability}` : `Reliability: ${item.source_reliability}`}
+          </span>
+        ) : null}
+        {tags.slice(0, 6).map((t) => (
           <span className="tag" key={t}>
             {t}
           </span>
         ))}
       </div>
       <ul className="bullets">
-        {item.summary_bullets.slice(0, item.item_type === "paper" ? 5 : 4).map((b, idx) => (
+        {bullets.slice(0, item.item_type === "paper" ? 5 : 4).map((b, idx) => (
           <li key={idx}>{b}</li>
         ))}
       </ul>
       {why ? (
         <div className="why">
-          <span className="whyLabel">{cardWhyLabel(item)}</span>
+          <span className="whyLabel">{whyLabel}</span>
           {why}
         </div>
       ) : null}
@@ -86,11 +120,11 @@ function ItemCard({ item, showSectionTag }: { item: ItemOut; showSectionTag?: bo
   );
 }
 
-function SectionBlock({ section, items }: { section: Section; items: ItemOut[] }) {
+function SectionBlock({ section, items, lang }: { section: Section; items: ItemOut[]; lang: Lang }) {
   return (
     <div className="section">
       <div className="sectionHeader">
-        <div className="sectionName">{sectionLabel(section)}</div>
+        <div className="sectionName">{sectionLabel(section, lang)}</div>
         <div className="sectionMeta">{items.length} items</div>
       </div>
       <div className="cards">
@@ -99,7 +133,7 @@ function SectionBlock({ section, items }: { section: Section; items: ItemOut[] }
             <div className="metaRow">No items yet for this edition.</div>
           </div>
         ) : (
-          items.map((item) => <ItemCard key={item.id} item={item} />)
+          items.map((item) => <ItemCard key={item.id} item={item} lang={lang} />)
         )}
       </div>
     </div>
@@ -107,8 +141,8 @@ function SectionBlock({ section, items }: { section: Section; items: ItemOut[] }
 }
 
 export function Dashboard() {
-  const [tz, setTz] = useState<string>("Asia/Hong_Kong");
   const [query, setQuery] = useState<string>("");
+  const [lang, setLang] = useState<Lang>("zh");
   const [editions, setEditions] = useState<EditionMetaOut[] | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [edition, setEdition] = useState<EditionOut | null>(null);
@@ -116,12 +150,21 @@ export function Dashboard() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const stored = window.localStorage.getItem("nexus_lang");
+    if (stored === "en" || stored === "zh") setLang(stored);
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem("nexus_lang", lang);
+  }, [lang]);
+
+  useEffect(() => {
     let canceled = false;
     setError(null);
     setEditions(null);
     setEdition(null);
     setSelected(null);
-    fetchEditions(tz)
+    fetchEditions(TZ)
       .then((e) => {
         if (canceled) return;
         setEditions(e);
@@ -134,14 +177,14 @@ export function Dashboard() {
     return () => {
       canceled = true;
     };
-  }, [tz]);
+  }, []);
 
   useEffect(() => {
     if (!selected) return;
     let canceled = false;
     setError(null);
     setEdition(null);
-    fetchEdition(tz, selected)
+    fetchEdition(TZ, selected)
       .then((e) => {
         if (canceled) return;
         setEdition(e);
@@ -153,7 +196,7 @@ export function Dashboard() {
     return () => {
       canceled = true;
     };
-  }, [tz, selected]);
+  }, [selected]);
 
   useEffect(() => {
     if (!edition) return;
@@ -192,27 +235,36 @@ export function Dashboard() {
     ? `Edition date: ${prettyLocalLabel(selectedMeta.edition_date_local)} (summarizes UTC ${selectedMeta.utc_date})`
     : "Daily edition (summarizes the previous UTC day).";
 
+  const subtitleZh = selectedMeta
+    ? `刊期：${prettyLocalLabel(selectedMeta.edition_date_local)}（汇总 UTC ${selectedMeta.utc_date}）`
+    : "每日刊（汇总前一日 UTC 内容）。";
+
   return (
     <div className="container">
       <div className="header">
         <div className="brand">
           <div className="title">Nexus AI Daily</div>
-          <div className="subtitle">{subtitle}</div>
+          <div className="subtitle">
+            {lang === "zh" ? subtitleZh : subtitle}
+          </div>
         </div>
         <div className="controls">
           <input
             className="input"
-            placeholder="Filters: keyword or tag…"
+            placeholder={lang === "zh" ? "搜索：关键词或标签…" : "Filters: keyword or tag…"}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
-          <select className="select" value={tz} onChange={(e) => setTz(e.target.value)}>
-            {TZ_PRESETS.map((z) => (
-              <option key={z} value={z}>
-                {z}
-              </option>
-            ))}
-          </select>
+          <button
+            className="select langToggle"
+            onClick={() => setLang((l) => (l === "zh" ? "en" : "zh"))}
+            aria-label="language toggle"
+            type="button"
+          >
+            <span className={`langPill ${lang === "zh" ? "langActive" : ""}`.trim()}>中文</span>
+            <span className="langSep">/</span>
+            <span className={`langPill ${lang === "en" ? "langActive" : ""}`.trim()}>English</span>
+          </button>
           <div className="pill">Recent 7 Days</div>
         </div>
       </div>
@@ -247,7 +299,7 @@ export function Dashboard() {
               disabled={query.trim().length > 0}
               title={query.trim().length > 0 ? "Clear search to browse by section" : undefined}
             >
-              {sectionLabel(s)}
+              {sectionLabel(s, lang)}
             </button>
           );
         })}
@@ -255,27 +307,27 @@ export function Dashboard() {
 
       {query.trim() ? (
         <div className="hub">
-          <div className="hubTitle">SEARCH RESULTS</div>
+          <div className="hubTitle">{lang === "zh" ? "搜索结果" : "SEARCH RESULTS"}</div>
           <div className="section">
             <div className="sectionHeader">
-              <div className="sectionName">Matches (latest → oldest)</div>
+              <div className="sectionName">{lang === "zh" ? "匹配（最新 → 最旧）" : "Matches (latest → oldest)"}</div>
               <div className="sectionMeta">{searchItems.length} items</div>
             </div>
             <div className="cards">
               {searchItems.length === 0 ? (
                 <div className="card">
-                  <div className="metaRow">No matches for this edition.</div>
+                  <div className="metaRow">{lang === "zh" ? "本期没有匹配结果。" : "No matches for this edition."}</div>
                 </div>
               ) : (
-                searchItems.map((item) => <ItemCard key={item.id} item={item} showSectionTag />)
+                searchItems.map((item) => <ItemCard key={item.id} item={item} showSectionTag lang={lang} />)
               )}
             </div>
           </div>
         </div>
       ) : (
         <div className="hub">
-          <div className="hubTitle">SECTION</div>
-          <SectionBlock section={activeSection} items={sectionItems} />
+          <div className="hubTitle">{lang === "zh" ? "分区" : "SECTION"}</div>
+          <SectionBlock section={activeSection} items={sectionItems} lang={lang} />
         </div>
       )}
 

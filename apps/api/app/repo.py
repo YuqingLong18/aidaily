@@ -9,15 +9,26 @@ from sqlmodel import Session, select
 from app.models import Item, Section
 
 
+def _equivalent_timezones(tz: str) -> list[str]:
+    """
+    Treat Beijing time as a single logical timezone even if historical data was written
+    with other UTC+8 identifiers.
+    """
+    if tz in {"Asia/Shanghai", "Asia/Hong_Kong"}:
+        return ["Asia/Shanghai", "Asia/Hong_Kong"]
+    return [tz]
+
+
 def get_item(session: Session, item_id: UUID) -> Optional[Item]:
     return session.get(Item, item_id)
 
 
 def list_items_for_edition(session: Session, edition_date_local: str, tz: str) -> list[Item]:
+    tzs = _equivalent_timezones(tz)
     stmt = (
         select(Item)
         .where(Item.edition_date_local == edition_date_local)
-        .where(Item.edition_timezone == tz)
+        .where(Item.edition_timezone.in_(tzs))
         .order_by(Item.rank_score.desc(), Item.published_at_utc.desc())
     )
     return list(session.exec(stmt).all())

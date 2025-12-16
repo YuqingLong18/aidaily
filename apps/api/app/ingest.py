@@ -72,7 +72,7 @@ def ingest_live(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Nexus AI Daily ingestion")
-    parser.add_argument("--tz", default="Asia/Hong_Kong")
+    parser.add_argument("--tz", default="Asia/Shanghai")
     parser.add_argument("--date", dest="edition_date_local", default=None, help="Local edition date (YYYY-MM-DD)")
     parser.add_argument("--days", type=int, default=1, help="Number of local edition days to seed (default: 1)")
     parser.add_argument("--mode", choices=["live", "seed"], default="live")

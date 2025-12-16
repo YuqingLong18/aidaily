@@ -12,6 +12,7 @@ from app.models import ItemType, Section, TimestampConfidence
 from app.openrouter_client import chat_json, load_openrouter_config
 from app.repo import list_items_for_edition
 from app.time_semantics import local_today
+from app.translate import translate_items_to_zh
 
 
 def _limit_by_section() -> dict[Section, int]:
@@ -145,12 +146,53 @@ def curate_edition(edition_date_local: date, tz: str, *, dry_run: bool) -> None:
         if not dry_run:
             session.commit()
 
+            # Translation pass (English -> Simplified Chinese) for UI toggle.
+            trans_in = []
+            for i in items:
+                trans_in.append(
+                    {
+                        "id": str(i.id),
+                        "title": i.title,
+                        "tags": [t.strip() for t in (i.tags_csv or "").split(",") if t.strip()],
+                        "summary_bullets": [
+                            b.strip("- ").strip() for b in (i.summary_bullets_md or "").splitlines() if b.strip()
+                        ],
+                        "why_it_matters": i.why_it_matters_md or None,
+                        "market_impact": i.market_impact_md or None,
+                    }
+                )
+
+            translated = translate_items_to_zh(trans_in)
+            for item_id, fields in translated.items():
+                it = items_by_id.get(item_id)
+                if not it:
+                    continue
+                title_zh = fields.get("title_zh")
+                if isinstance(title_zh, str) and title_zh.strip():
+                    it.title_zh = title_zh.strip()
+
+                tags_zh = fields.get("tags_zh") or []
+                it.tags_zh_csv = ",".join([t.strip() for t in tags_zh if isinstance(t, str) and t.strip()][:8])
+
+                bullets_zh = fields.get("summary_bullets_zh") or []
+                it.summary_bullets_zh_md = "\n".join(
+                    [f"- {b.strip()}" for b in bullets_zh if isinstance(b, str) and b.strip()]
+                )
+
+                w = fields.get("why_it_matters_zh")
+                it.why_it_matters_zh_md = w.strip() if isinstance(w, str) and w.strip() else ""
+                m = fields.get("market_impact_zh")
+                it.market_impact_zh_md = m.strip() if isinstance(m, str) and m.strip() else ""
+
+            session.commit()
+            print("translation: updated zh fields")
+
         print(f"done: updated {total_updated} item(s), top picks declared {total_top} (ids only)")
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Curate an edition via OpenRouter LLM")
-    parser.add_argument("--tz", default="Asia/Hong_Kong")
+    parser.add_argument("--tz", default="Asia/Shanghai")
     parser.add_argument("--date", dest="edition_date_local", default=None, help="Local edition date (YYYY-MM-DD)")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()

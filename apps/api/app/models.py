@@ -38,6 +38,7 @@ class Item(SQLModel, table=True):
     section: Section = Field(index=True)
 
     title: str
+    title_zh: Optional[str] = Field(default=None)
     source: str = Field(index=True)
     source_url: str = Field(index=True, unique=True)
     canonical_url: Optional[str] = Field(default=None, index=True)
@@ -48,11 +49,15 @@ class Item(SQLModel, table=True):
     edition_timezone: str = Field(index=True)
 
     tags_csv: str = Field(default="")
+    tags_zh_csv: str = Field(default="")
     difficulty: Optional[str] = Field(default=None)
 
     summary_bullets_md: str = Field(default="")
+    summary_bullets_zh_md: str = Field(default="")
     why_it_matters_md: str = Field(default="")
+    why_it_matters_zh_md: str = Field(default="")
     market_impact_md: str = Field(default="")
+    market_impact_zh_md: str = Field(default="")
 
     source_reliability: Optional[str] = Field(default=None)
     timestamp_precision: TimestampPrecision = Field(default=TimestampPrecision.exact)

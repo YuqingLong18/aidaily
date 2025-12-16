@@ -12,6 +12,7 @@ export type ItemOut = {
   item_type: ItemType;
   section: Section;
   title: string;
+  title_zh?: string | null;
   source: string;
   source_url: string;
   canonical_url?: string | null;
@@ -19,10 +20,14 @@ export type ItemOut = {
   edition_date_local: string;
   edition_timezone: string;
   tags: string[];
+  tags_zh: string[];
   difficulty?: string | null;
   summary_bullets: string[];
+  summary_bullets_zh: string[];
   why_it_matters?: string | null;
+  why_it_matters_zh?: string | null;
   market_impact?: string | null;
+  market_impact_zh?: string | null;
   source_reliability?: string | null;
   rank_score: number;
 };

@@ -79,7 +79,7 @@ def health() -> dict:
 
 @app.get("/api/editions", response_model=list[EditionMetaOut])
 def list_editions(
-    tz: str = Query(default="Asia/Hong_Kong"),
+    tz: str = Query(default="Asia/Shanghai"),
     days: int = Query(default=7, ge=1, le=14),
 ) -> list[EditionMetaOut]:
     today = local_today(tz)
@@ -107,7 +107,7 @@ def list_editions(
 @app.get("/api/editions/{edition_date_local}", response_model=EditionOut)
 def get_edition(
     edition_date_local: str,
-    tz: str = Query(default="Asia/Hong_Kong"),
+    tz: str = Query(default="Asia/Shanghai"),
 ) -> EditionOut:
     try:
         d = date.fromisoformat(edition_date_local)
@@ -129,12 +129,15 @@ def get_edition(
 
     def to_out(item) -> ItemOut:
         tags = [t.strip() for t in (item.tags_csv or "").split(",") if t.strip()]
+        tags_zh = [t.strip() for t in (item.tags_zh_csv or "").split(",") if t.strip()]
         bullets = [b.strip("- ").strip() for b in (item.summary_bullets_md or "").splitlines() if b.strip()]
+        bullets_zh = [b.strip("- ").strip() for b in (item.summary_bullets_zh_md or "").splitlines() if b.strip()]
         return ItemOut(
             id=item.id,
             item_type=item.item_type,
             section=item.section,
             title=item.title,
+            title_zh=item.title_zh,
             source=item.source,
             source_url=item.source_url,
             canonical_url=item.canonical_url,
@@ -142,10 +145,14 @@ def get_edition(
             edition_date_local=item.edition_date_local,
             edition_timezone=item.edition_timezone,
             tags=tags,
+            tags_zh=tags_zh,
             difficulty=item.difficulty,
             summary_bullets=bullets,
+            summary_bullets_zh=bullets_zh,
             why_it_matters=item.why_it_matters_md or None,
+            why_it_matters_zh=item.why_it_matters_zh_md or None,
             market_impact=item.market_impact_md or None,
+            market_impact_zh=item.market_impact_zh_md or None,
             source_reliability=item.source_reliability,
             timestamp_precision=item.timestamp_precision,
             timestamp_confidence=item.timestamp_confidence,
@@ -178,12 +185,15 @@ def item_detail(item_id: str, tz: Optional[str] = None) -> ItemOut:
             raise HTTPException(status_code=404, detail="not found")
 
     tags = [t.strip() for t in (item.tags_csv or "").split(",") if t.strip()]
+    tags_zh = [t.strip() for t in (item.tags_zh_csv or "").split(",") if t.strip()]
     bullets = [b.strip("- ").strip() for b in (item.summary_bullets_md or "").splitlines() if b.strip()]
+    bullets_zh = [b.strip("- ").strip() for b in (item.summary_bullets_zh_md or "").splitlines() if b.strip()]
     return ItemOut(
         id=item.id,
         item_type=item.item_type,
         section=item.section,
         title=item.title,
+        title_zh=item.title_zh,
         source=item.source,
         source_url=item.source_url,
         canonical_url=item.canonical_url,
@@ -191,10 +201,14 @@ def item_detail(item_id: str, tz: Optional[str] = None) -> ItemOut:
         edition_date_local=item.edition_date_local,
         edition_timezone=item.edition_timezone if tz is None else tz,
         tags=tags,
+        tags_zh=tags_zh,
         difficulty=item.difficulty,
         summary_bullets=bullets,
+        summary_bullets_zh=bullets_zh,
         why_it_matters=item.why_it_matters_md or None,
+        why_it_matters_zh=item.why_it_matters_zh_md or None,
         market_impact=item.market_impact_md or None,
+        market_impact_zh=item.market_impact_zh_md or None,
         source_reliability=item.source_reliability,
         timestamp_precision=item.timestamp_precision,
         timestamp_confidence=item.timestamp_confidence,

@@ -16,17 +16,17 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 
-# ingest real sources for the edition window (default: live)
-python -m app.ingest --tz Asia/Hong_Kong --days 1 --print-window
+# ingest real sources for the edition window (default tz: Asia/Shanghai)
+python -m app.ingest --days 1 --print-window
 
 # optional: enable LLM curation (OpenRouter) to pick top items + generate tags/summaries
 # Put these in `.env` (repo root or `apps/api/.env`):
 # OPENROUTER_API_KEY="..."
 # NEXUS_LLM_MODEL="google/gemini-2.5-flash"
-python -m app.ingest --tz Asia/Hong_Kong --days 1 --curate
+python -m app.ingest --days 1 --curate
 
 # (still available) create deterministic sample editions
-python -m app.ingest --mode seed --tz Asia/Hong_Kong --days 7
+python -m app.ingest --mode seed --days 7
 
 uvicorn app.main:app --reload --port 8000
 ```

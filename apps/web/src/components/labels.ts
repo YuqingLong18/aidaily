@@ -1,17 +1,19 @@
 import type { Section } from "./api";
 
-export function sectionLabel(section: Section): string {
+export type Lang = "zh" | "en";
+
+export function sectionLabel(section: Section, lang: Lang = "en"): string {
   switch (section) {
     case "ai_for_science":
-      return "AI for Science (Top 5)";
+      return lang === "zh" ? "科学中的 AI（Top 5）" : "AI for Science (Top 5)";
     case "ai_theory_arch":
-      return "AI Theory & Architectures (Top 5)";
+      return lang === "zh" ? "AI 理论与架构（Top 5）" : "AI Theory & Architectures (Top 5)";
     case "ai_education":
-      return "AI in Education (Top 5)";
+      return lang === "zh" ? "教育中的 AI（Top 5）" : "AI in Education (Top 5)";
     case "product_tech":
-      return "Product & Technology Watch (Top 3–6)";
+      return lang === "zh" ? "产品与技术观察（Top 3–6）" : "Product & Technology Watch (Top 3–6)";
     case "market_policy":
-      return "Market & Policy Lens (Top 3–5)";
+      return lang === "zh" ? "市场与政策视角（Top 3–5）" : "Market & Policy Lens (Top 3–5)";
   }
 }
 
