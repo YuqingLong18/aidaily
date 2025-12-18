@@ -75,6 +75,11 @@ def main() -> None:
     parser.add_argument("--tz", default="Asia/Shanghai")
     parser.add_argument("--date", dest="edition_date_local", default=None, help="Local edition date (YYYY-MM-DD)")
     parser.add_argument("--days", type=int, default=1, help="Number of local edition days to seed (default: 1)")
+    parser.add_argument(
+        "--dates",
+        default=None,
+        help="Comma-separated local edition dates (YYYY-MM-DD,YYYY-MM-DD). Overrides --date/--days if set.",
+    )
     parser.add_argument("--mode", choices=["live", "seed"], default="live")
     parser.add_argument("--scrape-news", action="store_true", help="Fetch article pages to improve summaries (slower)")
     parser.add_argument("--max-news-to-scrape", type=int, default=35)
@@ -84,17 +89,27 @@ def main() -> None:
     args = parser.parse_args()
 
     tz = args.tz
-    if args.edition_date_local is None:
-        d = local_today(tz)
+    if args.dates is not None:
+        raw_dates = [p.strip() for p in str(args.dates).split(",") if p.strip()]
+        if not raw_dates:
+            raise SystemExit("--dates cannot be empty")
+        try:
+            dates = sorted({date.fromisoformat(d) for d in raw_dates}, reverse=True)
+        except ValueError as e:
+            raise SystemExit("--dates must be YYYY-MM-DD,YYYY-MM-DD,...") from e
     else:
-        d = date.fromisoformat(args.edition_date_local)
+        if args.edition_date_local is None:
+            d = local_today(tz)
+        else:
+            d = date.fromisoformat(args.edition_date_local)
 
-    if args.days < 1 or args.days > 31:
-        raise SystemExit("--days must be between 1 and 31")
+        if args.days < 1 or args.days > 31:
+            raise SystemExit("--days must be between 1 and 31")
+
+        dates = [d.fromordinal(d.toordinal() - i) for i in range(args.days)]
 
     total = 0
-    for i in range(args.days):
-        day = d.fromordinal(d.toordinal() - i)
+    for day in dates:
         if args.mode == "seed":
             total += ingest_seed(day, tz)
         else:
@@ -114,7 +129,8 @@ def main() -> None:
     label = "seeded" if args.mode == "seed" else "ingested"
     if args.dry_run and args.mode == "live":
         label = "fetched"
-    print(f"{label} {total} items across {args.days} edition day(s) ending {d.isoformat()} ({tz})")
+    dates_label = ", ".join([d.isoformat() for d in dates])
+    print(f"{label} {total} items across {len(dates)} edition day(s): {dates_label} ({tz})")
 
 
 if __name__ == "__main__":

@@ -11,6 +11,18 @@ python -m app.ingest --tz Asia/Hong_Kong --days 7
 uvicorn app.main:app --reload --port 8000
 ```
 
+## Manual ingestion for a specific edition date
+
+Run ingestion “as if today is `2025-12-17` / `2025-12-18`” by explicitly setting the local edition date(s).
+
+```bash
+# Ingest two editions: 2025-12-18 and 2025-12-17 (HK local labels)
+python -m app.ingest --tz Asia/Hong_Kong --date 2025-12-18 --days 2 --print-window
+
+# Or: specify the dates directly (order doesn't matter)
+python -m app.ingest --tz Asia/Hong_Kong --dates 2025-12-17,2025-12-18 --print-window
+```
+
 ## Endpoints
 
 - `GET /api/health`
