@@ -121,10 +121,10 @@ def main() -> None:
                 dry_run=bool(args.dry_run),
                 print_window=bool(args.print_window),
             )
-            if args.curate and not args.dry_run:
-                from app.curate import curate_edition
+        if args.curate and not args.dry_run:
+            from app.curate import curate_edition
 
-                curate_edition(day, tz, dry_run=False)
+            curate_edition(day, tz, dry_run=False)
 
     label = "seeded" if args.mode == "seed" else "ingested"
     if args.dry_run and args.mode == "live":

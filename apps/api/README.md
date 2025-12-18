@@ -23,6 +23,20 @@ python -m app.ingest --tz Asia/Hong_Kong --date 2025-12-18 --days 2 --print-wind
 python -m app.ingest --tz Asia/Hong_Kong --dates 2025-12-17,2025-12-18 --print-window
 ```
 
+## Curation (prepare for frontend)
+
+Ingestion fetches/stores items, but the frontend expects curated fields like `rank_score`, `tags`, `summary_bullets`, and (optionally) Chinese translations. Curation fills those via an LLM.
+
+Prereq: set `OPENROUTER_API_KEY` (or `NEXUS_OPENROUTER_API_KEY`) in your environment.
+
+```bash
+# Curate already-ingested editions
+python -m app.curate --tz Asia/Hong_Kong --dates 2025-12-17,2025-12-18
+
+# Or do it in one step (ingest + curate)
+python -m app.ingest --tz Asia/Hong_Kong --dates 2025-12-17,2025-12-18 --curate
+```
+
 ## Endpoints
 
 - `GET /api/health`
